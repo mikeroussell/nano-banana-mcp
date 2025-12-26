@@ -125,18 +125,24 @@ Error Handling:
             text: result.text,
         };
         // Format text response
-        let textContent = `✅ Image generated successfully\n\n`;
+        let textContent = `Image generated successfully!\n`;
         textContent += `**Model:** ${output.model}\n`;
-        textContent += `**Prompt:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}\n`;
+        textContent += `**Prompt:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}`;
         if (result.text) {
-            textContent += `\n**Model Response:**\n${result.text}\n`;
+            textContent += `\n\n**Model Response:**\n${result.text}`;
         }
-        if (result.imageData) {
-            textContent += `\n**Image:** Base64 data available (${result.mimeType})\n`;
-            textContent += `Data length: ${result.imageData.length} characters`;
+        // Return image in content array so Claude.ai can display it
+        const content = [];
+        if (result.imageData && result.mimeType) {
+            content.push({
+                type: "image",
+                data: result.imageData,
+                mimeType: result.mimeType,
+            });
         }
+        content.push({ type: "text", text: textContent });
         return {
-            content: [{ type: "text", text: textContent }],
+            content,
             structuredContent: output,
         };
     }
@@ -225,18 +231,24 @@ Error Handling:
             mimeType: result.mimeType,
             text: result.text,
         };
-        let textContent = `✅ Image edited successfully\n\n`;
+        let textContent = `Image edited successfully!\n`;
         textContent += `**Model:** ${output.model}\n`;
-        textContent += `**Edit:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}\n`;
+        textContent += `**Edit:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}`;
         if (result.text) {
-            textContent += `\n**Model Response:**\n${result.text}\n`;
+            textContent += `\n\n**Model Response:**\n${result.text}`;
         }
-        if (result.imageData) {
-            textContent += `\n**Edited Image:** Base64 data available (${result.mimeType})\n`;
-            textContent += `Data length: ${result.imageData.length} characters`;
+        // Return image in content array so Claude.ai can display it
+        const content = [];
+        if (result.imageData && result.mimeType) {
+            content.push({
+                type: "image",
+                data: result.imageData,
+                mimeType: result.mimeType,
+            });
         }
+        content.push({ type: "text", text: textContent });
         return {
-            content: [{ type: "text", text: textContent }],
+            content,
             structuredContent: output,
         };
     }
@@ -327,19 +339,25 @@ Examples:
             mimeType: result.mimeType,
             text: result.text,
         };
-        let textContent = `✅ Images composed successfully\n\n`;
+        let textContent = `Images composed successfully!\n`;
         textContent += `**Model:** ${MODELS.NANO_BANANA_PRO}\n`;
         textContent += `**Input Images:** ${params.images.length}\n`;
-        textContent += `**Prompt:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}\n`;
+        textContent += `**Prompt:** ${params.prompt.substring(0, 100)}${params.prompt.length > 100 ? "..." : ""}`;
         if (result.text) {
-            textContent += `\n**Model Response:**\n${result.text}\n`;
+            textContent += `\n\n**Model Response:**\n${result.text}`;
         }
-        if (result.imageData) {
-            textContent += `\n**Composed Image:** Base64 data available (${result.mimeType})\n`;
-            textContent += `Data length: ${result.imageData.length} characters`;
+        // Return image in content array so Claude.ai can display it
+        const content = [];
+        if (result.imageData && result.mimeType) {
+            content.push({
+                type: "image",
+                data: result.imageData,
+                mimeType: result.mimeType,
+            });
         }
+        content.push({ type: "text", text: textContent });
         return {
-            content: [{ type: "text", text: textContent }],
+            content,
             structuredContent: output,
         };
     }

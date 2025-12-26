@@ -501,19 +501,49 @@ async function runStdio(): Promise<void> {
 }
 
 /**
+ * Validate bearer token from Authorization header
+ */
+function validateBearerToken(authHeader: string | undefined): boolean {
+  const expectedToken = process.env.MCP_AUTH_TOKEN;
+
+  // If no token is configured, allow all requests (for backwards compatibility)
+  if (!expectedToken) {
+    console.warn("WARNING: MCP_AUTH_TOKEN not set - server is unauthenticated!");
+    return true;
+  }
+
+  if (!authHeader) {
+    return false;
+  }
+
+  // Support both "Bearer <token>" and raw token formats
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : authHeader;
+
+  return token === expectedToken;
+}
+
+/**
  * Run server with HTTP transport (for remote/web use)
  */
 async function runHTTP(): Promise<void> {
   const app = express();
   app.use(express.json({ limit: "50mb" })); // Large limit for base64 images
 
-  // Health check endpoint
+  // Health check endpoint (no auth required)
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", server: "nanobanana-mcp-server", version: "1.0.0" });
   });
 
-  // MCP endpoint
+  // MCP endpoint (auth required)
   app.post("/mcp", async (req, res) => {
+    // Validate bearer token
+    if (!validateBearerToken(req.headers.authorization)) {
+      res.status(401).json({ error: "Unauthorized - invalid or missing bearer token" });
+      return;
+    }
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

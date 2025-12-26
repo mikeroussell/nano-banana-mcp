@@ -429,23 +429,27 @@ async function runStdio() {
     console.error("Nano Banana MCP Server running on stdio");
 }
 /**
- * Validate bearer token from Authorization header
+ * Validate auth token from Authorization header or query parameter
  */
-function validateBearerToken(authHeader) {
+function validateAuthToken(authHeader, queryToken) {
     const expectedToken = process.env.MCP_AUTH_TOKEN;
     // If no token is configured, allow all requests (for backwards compatibility)
     if (!expectedToken) {
         console.warn("WARNING: MCP_AUTH_TOKEN not set - server is unauthenticated!");
         return true;
     }
-    if (!authHeader) {
-        return false;
+    // Check query parameter first (for Claude.ai which doesn't support custom headers)
+    if (queryToken && queryToken === expectedToken) {
+        return true;
     }
-    // Support both "Bearer <token>" and raw token formats
-    const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : authHeader;
-    return token === expectedToken;
+    // Fall back to Authorization header
+    if (authHeader) {
+        const token = authHeader.startsWith("Bearer ")
+            ? authHeader.slice(7)
+            : authHeader;
+        return token === expectedToken;
+    }
+    return false;
 }
 /**
  * Run server with HTTP transport (for remote/web use)
@@ -459,9 +463,10 @@ async function runHTTP() {
     });
     // MCP endpoint (auth required)
     app.post("/mcp", async (req, res) => {
-        // Validate bearer token
-        if (!validateBearerToken(req.headers.authorization)) {
-            res.status(401).json({ error: "Unauthorized - invalid or missing bearer token" });
+        // Validate auth token (from query param or header)
+        const queryToken = req.query.token;
+        if (!validateAuthToken(req.headers.authorization, queryToken)) {
+            res.status(401).json({ error: "Unauthorized - invalid or missing token" });
             return;
         }
         const transport = new StreamableHTTPServerTransport({

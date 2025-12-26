@@ -501,9 +501,9 @@ async function runStdio(): Promise<void> {
 }
 
 /**
- * Validate bearer token from Authorization header
+ * Validate auth token from Authorization header or query parameter
  */
-function validateBearerToken(authHeader: string | undefined): boolean {
+function validateAuthToken(authHeader: string | undefined, queryToken: string | undefined): boolean {
   const expectedToken = process.env.MCP_AUTH_TOKEN;
 
   // If no token is configured, allow all requests (for backwards compatibility)
@@ -512,16 +512,20 @@ function validateBearerToken(authHeader: string | undefined): boolean {
     return true;
   }
 
-  if (!authHeader) {
-    return false;
+  // Check query parameter first (for Claude.ai which doesn't support custom headers)
+  if (queryToken && queryToken === expectedToken) {
+    return true;
   }
 
-  // Support both "Bearer <token>" and raw token formats
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : authHeader;
+  // Fall back to Authorization header
+  if (authHeader) {
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : authHeader;
+    return token === expectedToken;
+  }
 
-  return token === expectedToken;
+  return false;
 }
 
 /**
@@ -538,9 +542,10 @@ async function runHTTP(): Promise<void> {
 
   // MCP endpoint (auth required)
   app.post("/mcp", async (req, res) => {
-    // Validate bearer token
-    if (!validateBearerToken(req.headers.authorization)) {
-      res.status(401).json({ error: "Unauthorized - invalid or missing bearer token" });
+    // Validate auth token (from query param or header)
+    const queryToken = req.query.token as string | undefined;
+    if (!validateAuthToken(req.headers.authorization, queryToken)) {
+      res.status(401).json({ error: "Unauthorized - invalid or missing token" });
       return;
     }
 
